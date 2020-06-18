@@ -1,0 +1,196 @@
+.pdf-annotation-reader-toolbar {
+/*  background-color: #eaeaea;
+  border-bottom: 1px solid #d0d0d0;
+  height: 35px;
+  position: fixed;
+  left: 0;
+  right: 0;
+*/
+    padding: 0 5px;
+  text-shadow: 1px 1px 0 #fff;
+  z-index: 100;
+  -webkit-box-shadow: inset 0px 1px 1px 0px rgba(255,255,255,1);
+     -moz-box-shadow: inset 0px 1px 1px 0px rgba(255,255,255,1);
+          box-shadow: inset 0px 1px 1px 0px rgba(255,255,255,1);
+}
+/*
+.pdf-annotation-reader-toolbar .spacer {
+  display: inline-block;
+  border-left: 1px solid #c1c1c1;
+  height: 34px;
+  margin: 0 10px -11px;
+}
+*/
+.pdf-annotation-reader-toolbar a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.pdf-annotation-reader-toolbar select,
+.pdf-annotation-reader-toolbar button {
+/* background-color: #eaeaea;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 15px;
+  padding: 3px;
+  margin: 0;
+  text-align: center;
+  text-shadow: 1px 1px 0 #fff;
+  position: relative;
+  min-width: 27px;
+  min-height: 27px;
+*/
+
+    max-height: 35px;
+    background-image: -webkit-linear-gradient(hsla(0,0%,100%,.05), hsla(0,0%,0%,.1));
+    background-image:    -moz-linear-gradient(hsla(0,0%,100%,.05), hsla(0,0%,0%,.1));
+    background-image:     -ms-linear-gradient(hsla(0,0%,100%,.05), hsla(0,0%,0%,.1));
+    background-image:      -o-linear-gradient(hsla(0,0%,100%,.05), hsla(0,0%,0%,.1));
+    background-image:         linear-gradient(hsla(0,0%,100%,.05), hsla(0,0%,0%,.1));
+    border: none;
+    border-radius: .5em;
+    box-shadow: inset 0 0 0 1px hsla(0,0%,0%,.2),
+                inset 0 2px 0 hsla(0,0%,100%,.1),
+                inset 0 1.2em 0 hsla(0,0%,100%,0.1),
+                inset 0 -.2em 0 hsla(0,0%,100%,.1),
+                inset 0 -.25em 0 hsla(0,0%,0%,.25),
+                0 .25em .25em hsla(0,0%,0%,.05);
+    color: #444;
+    cursor: pointer;
+    display: inline-block;
+    font-family: sans-serif;
+    font-size: 1em;
+    font-weight: bold;
+    line-height: 1.5;
+    padding: .5em 1.5em .75em;
+    position: relative;
+    text-decoration: none;
+    text-shadow: 0 1px 1px hsla(0,0%,100%,.25);
+    vertical-align: middle;
+
+}
+
+.pdf-annotation-reader-toolbar button:after {
+  content: ' ';
+  display: block;
+}
+.pdf-annotation-reader-toolbar button.active {
+    box-shadow: inset 0 0 0 1px hsla(0,0%,0%,.2),
+                inset 0 2px 0 hsla(0,0%,100%,.1),
+                inset 0 1.2em 0 hsla(0,0%,100%,.1),
+                inset 0 0 0 3em hsla(0,0%,100%,.2),
+                inset 0 .25em .5em hsla(0,0%,0%,.05),
+                0 -1px 1px hsla(0,0%,0%,.1),
+                0 1px 1px hsla(0,0%,100%,.25);
+    margin-top: .25em;
+    outline: none;
+    padding-bottom: .5em;
+    background-color: #fff;
+/*  border-color: #bababa;
+  -webkit-box-shadow: inset 0 0 1px rgba(0,0,0,0.25);
+     -moz-box-shadow: inset 0 0 1px rgba(0,0,0,0.25);
+          box-shadow: inset 0 0 1px rgba(0,0,0,0.25);
+*/
+}
+.pdf-annotation-reader-toolbar button:hover,
+.pdf-annotation-reader-toolbar button:focus {
+    box-shadow: inset 0 0 0 1px hsla(0,0%,0%,.2),
+    inset 0 2px 0 hsla(0,0%,100%,.1),
+    inset 0 1.2em 0 hsla(0,0%,100%,.1),
+    inset 0 -.2em 0 hsla(0,0%,100%,.1),
+    inset 0 -.25em 0 hsla(0,0%,0%,.25),
+    inset 0 0 0 3em hsla(0,0%,100%,.2),
+    0 .25em .25em hsla(0,0%,0%,.05);
+/*  border-color: #bababa;
+ */
+}
+
+.pdf-annotation-reader-toolbar button.pen {
+  font-size: 16px;
+}
+
+.pdf-annotation-reader-toolbar button.comment {
+  font-size: 10px;
+  color: #ffffff;
+  text-shadow: 0 0 0 #000000;
+
+}
+
+.pdf-annotation-reader-toolbar button.rectangle:after {
+ /* width: 15px;
+  height: 15px;
+  border: 1px solid red;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+*/
+        width: 30px;
+    height: 23px;
+    border: 1px solid red;
+    position: absolute;
+    top: 6px;
+    left: 8px;
+}
+
+.pdf-annotation-reader-toolbar button.highlight:after {
+/*  width: 17px;
+  height: 17px;
+  background: yellow;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+*/
+    width: 30px;
+    height: 23px;
+    background: yellow;
+    position: absolute;
+    top: 6px;
+    left: 8px;
+}
+
+.pdf-annotation-reader-toolbar button.strikeout:after {
+ /* width: 15px;
+  height: 1px;
+  background: red;
+  position: absolute;
+  top: 12px;
+  left: 4px;
+*/
+    width: 30px;
+  height: 1px;
+  background: red;
+  position: absolute;
+  top: 17px;
+  left: 8px;
+}
+
+.pdf-annotation-reader-toolbar button.text:after {
+  content: 'T';
+  font-family: 'Times New Roman';
+}
+
+.color {
+  display: inline-block;
+ /* width: 25px;
+  height: 25px;
+*/
+  width: 34px;
+  height: 27px;
+  border: 1px solid #000;
+  vertical-align: middle;
+}
+.color-selected {
+  border: 3px solid #666;
+  width: 30px;
+  height: 30px;
+  margin-top: -1px;
+  margin-left: -2px;
+  margin-right: -2px;
+}
+.text-color, .pen-color {
+  display: inline-block;
+}
+/** extra css add **/
+.pen-color div,  .text-color div{
+    z-index:100;
+}

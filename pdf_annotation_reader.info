@@ -1,0 +1,8 @@
+name = PDF Annotation Reader
+description = Read PDF with Annotation.
+package = custom
+core = 7.x
+
+dependencies[] = file
+dependencies[] = vl_util
+dependencies[] = multifield

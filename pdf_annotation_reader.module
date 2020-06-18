@@ -1,0 +1,447 @@
+<?php
+
+/**
+ * @file
+ *
+ * - Create PDF Annotation reader page.
+ * - Create field formatter for PDF File.
+ * - Store annaotions records.
+ * - Get user names and annotations.
+ *
+ */
+
+
+/**
+ * Implements hook_menu().
+ */
+function pdf_annotation_reader_menu() {
+  $items = array();
+  $items['pdf-annotation-reader/%'] = array(
+    'page callback' => 'pdf_annotation_reader',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['pdf-annotation-reader/save-annotations-ajax'] = array(
+    'page callback' => 'pdf_annotation_reader_save_annotations_ajax',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['pdf-annotation-reader/get-users-ajax'] = array(
+    'page callback' => 'pdf_annotation_reader_get_users_ajax',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['pdf-annotation-reader/get-annotations-ajax'] = array(
+    'page callback' => 'pdf_annotation_reader_get_annotations_ajax',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+} // End of pdf_annotation_reader_menu().
+
+/**
+ * Implements hook_theme().
+ */
+function pdf_annotation_reader_theme() {
+  return array(
+    'pdf_annotation_reader' => array(
+      'variables' => array(),
+      'template' => 'templates/pdf-annotation-reader',
+    ),
+    'clipboard' => array(
+      'variables' => array(),
+      'template' => 'templates/clipboard',
+    ),
+  );
+} // End of pdf_annotation_reader_theme().
+
+/**
+ * Implements hook_field_formatter_info().
+ *
+ * - Define a new field formatter for pdf
+ *   annotation reader.
+ */
+function pdf_annotation_reader_field_formatter_info() {
+  return array(
+    'pdf_annotation_reader_formatter' => array(
+      'label' => t('PDF Annotation Reader'),
+      'field types' => array('file'),
+    ),
+  );
+} // End of pdf_annotation_reader_field_formatter_info().
+
+/**
+ * Implements hook_field_formatter_view().
+ *
+ * - Create a new field formatter for pdf
+ *   annotation reader.
+ */
+function pdf_annotation_reader_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $settings = $display['settings'];
+  $element = array();
+  if ($display['type'] == 'pdf_annotation_reader_formatter') {
+    foreach ($items as $delta => $item) {
+      $file_name = $items[$delta]['filename'];
+      $explode_file_name = explode('.',$file_name);
+      $file_type = end($explode_file_name);
+      // Generate a link for only pdf files which are open in pdf Annoation reader.
+      if ($file_type == 'pdf') {
+        $options['attributes'] = array('target' => '_blank');
+        $element[$delta]['#type'] = 'markup';
+        $element[$delta]['#markup'] = l(t($items[$delta]['filename']), 'pdf-annotation-reader/' . $items[$delta]['fid'],
+                                        array('attributes' => array('target' => '_blank', 'class' => array ('pdf_annotation_reader_link'))));
+      }
+      else {
+        $element[$delta] = array(
+          '#theme' => 'file_link',
+          '#file' => (object) $item,
+        );
+      }
+    }
+  }
+  return $element;
+} // End of pdf_annotation_reader_field_formatter_view().
+
+/**
+ * - Page call back function to generate
+ *   to pdf annoation reader.
+ */
+function pdf_annotation_reader() {
+
+  global $base_url;
+
+  $fid = arg(1);
+  $file = file_load($fid);
+  $uri = $file->uri;
+  $document_id = file_create_url($uri);
+  $path = drupal_get_path('module', 'pdf_annotation_reader');
+  // Add custom JS and CSS file.
+  drupal_add_css($path . '/css/pdf_annotation_reader_toolbar.css');
+  drupal_add_css($path . '/css/pdf_annotation_reader_viewer.css');
+  drupal_add_js($path . '/js/shared/pdf.js', array('scope' => 'footer'));
+  drupal_add_js($path . '/js/shared/pdf_viewer.js', array('scope' => 'footer'));
+  drupal_add_js($path . '/js/index.js', array('scope' => 'footer'));
+  $html = theme('pdf_annotation_reader',array('document_id' => $document_id));
+  return $html;
+} // End of pdf_annotation_reader().
+
+/**
+ * - Ajax call back function to Store
+ *   Annotations.
+ */
+function pdf_annotation_reader_save_annotations_ajax() {
+
+  global $user;
+
+  // Get input from UI using Ajax post method and decode them.
+  $annotation_data = file_get_contents('php://input');
+  // Decode JSON input data.
+  $decoded_annotation_data = json_decode($annotation_data);
+  $file_id = isset($decoded_annotation_data->fileId) ? $decoded_annotation_data->fileId : '';
+  $annotations = isset($decoded_annotation_data->annotations) ? $decoded_annotation_data->annotations : '';
+  $node_title = $file_id . '|' . $user->uid;
+
+  $nid = vl_util_get_nid_from_title($node_title);
+  // Store annotations on existing node with date.
+  if ($nid) {
+    $node = node_load($nid);
+    $language = $node->language;
+    $annotation_records = isset($node->field_annotation_records[$language]) ? $node->field_annotation_records[$language] : '';
+    // Increment number of annoattion position to get last on list.
+    $annotation_position = (count($annotation_records));
+    $node->field_annotation_records[$language][$annotation_position]['field_annotations'][$language][0]['value'] = $annotations;
+    $node->field_annotation_records[$language][$annotation_position]['field_annotation_date'][$language][0]['value'] = time();
+    node_save($node);
+  }
+  // Store annotations on new node with annoations, user details and date.
+  else {
+    $node_type = 'pdf_annotation_reader_records';
+    $node = vl_util_create_skeleton_node($node_type);
+    $node->title = $node_title;
+    node_save($node);
+    $language = $node->language;
+    $node->field_user[$language][0]['target_id'] = $user->uid;
+    $node->field_file_id[$language][0]['value'] = $file_id;
+    $node->field_annotation_records[$language][0]['field_annotation_date'][$language][0]['value'] = time();
+    $node->field_annotation_records[$language][0]['field_annotations'][$language][0]['value'] = $annotations;
+    $node->field_document_id[$language][0]['value'] = $document_id;
+    node_save($node);
+  }
+} // End of pdf_annotation_reader_save_annotations_ajax().
+
+/**
+ * - Ajax callback function to get user names.
+ */
+function pdf_annotation_reader_get_users_ajax() {
+
+  global $user;
+
+  $annotation_data = file_get_contents('php://input');
+  // Decode JSON input data.
+  $decoded_annotation_data = json_decode($annotation_data);
+  $file_id = isset($decoded_annotation_data->fileId) ? $decoded_annotation_data->fileId : '';
+  if(empty($file_id)) {
+    return;
+  }
+  // Get user list who add/edit annotation on the particular file.
+  $user_options = pdf_annotation_reader_get_annotated_users($file_id);
+  // current uid 0 beacuse of select all;
+  $users = array(
+      'current_uid' => 0,//$user->uid,
+      'user_options' => $user_options,
+  );
+  drupal_json_output($users);
+} // End of pdf_annotation_reader_get_users_ajax().
+
+/**
+ * - Ajax callback function to get annotations.
+ */
+function pdf_annotation_reader_get_annotations_ajax() {
+  $annotation_options = array(0 => t('None'));
+  $annotations = array(
+    'last_annotations' => 0,
+    'annotation_options' => $annotation_options,
+  );
+
+  // Decode JSON input data.
+  $annotation_data = file_get_contents('php://input');
+  $decoded_annotation_data = json_decode($annotation_data);
+  $file_id = isset($decoded_annotation_data->fileId) ? $decoded_annotation_data->fileId : '';
+  $user_id = isset($decoded_annotation_data->userId) ? $decoded_annotation_data->userId : '';
+  if(empty($file_id) && empty($user_id)) {
+    drupal_json_output($annotations);
+    return;
+  }
+
+  // Get all annotations details when select all from the user list.
+  /*  if ($user_id == 0) {
+    $annotations = pdf_annotation_reader_get_all_annotations_on_file($file_id);
+    drupal_json_output($annotations);
+    return;
+  }
+*/
+  // Get nid of the annotations stored record.
+  $nid = pdf_annotation_reader_get_annotation_nid($file_id, $user_id);
+  // Get all annotations details when all is selected from the user list and current user not add annotations.
+  if (empty($nid)) {
+    $annotations = pdf_annotation_reader_get_all_annotations_on_file($file_id);
+    drupal_json_output($annotations);
+    return;
+  }
+  $annotation_options += pdf_annotation_reader_get_all_annotations($nid);
+  $all_aanotations = pdf_annotation_reader_get_all_annotations_string($nid);
+  $all_aanotations = '[' . $all_aanotations . ']';
+  if (!array_key_exists($all_aanotations, $annotation_options)) {
+    $annotation_options[$all_aanotations] = t('All');
+  }
+  arsort($annotation_options);
+  //$last_annotations = pdf_annotation_reader_get_last_annotations($nid);
+  $annotation_keys = array_keys($annotation_options);
+  $last_annotations = $annotation_keys[1];
+  $annotations['last_annotations'] = $last_annotations;
+  $annotations['annotation_options'] = $annotation_options;
+  drupal_json_output($annotations);
+} // End of pdf_annotation_reader_get_annotations_ajax().
+
+/**
+ * - Helper function to get last annotations.
+ *
+ * @param $nid.
+ * - Nid of pdf annotation reader records.
+ *
+ * @return $annotations.
+ * - Last annotations stored.
+ *
+ */
+/*
+function pdf_annotation_reader_get_last_annotations($nid) {
+  $annotations = '';
+  if ($nid) {
+    $node = node_load($nid);
+    $language = $node->language;
+    $annotation_records = isset($node->field_annotation_records[$language]) ? $node->field_annotation_records[$language] : '';
+    // Get last annoattion in a multifeild.
+    $annotation_position = (count($annotation_records)) - 1;
+    $annotations = isset($annotation_records[$annotation_position]['field_annotations'][$language][0])
+                 ? $annotation_records[$annotation_position]['field_annotations'][$language][0]['value'] : '';  }
+  return $annotations;
+} // End of pdf_annotation_reader_get_last_annotations().
+*/
+/**
+ * - Helper function to get all annotations.
+ *
+ * @param $nid.
+ * - Nid of pdf annotation reader records.
+ *
+ * @return $annotations.
+ * - All annotations stored.
+ *
+ */
+function pdf_annotation_reader_get_all_annotations($nid) {
+  $annotations = array();
+  if ($nid) {
+    $node = node_load($nid);
+    $language = $node->language;
+    $annotation_records = isset($node->field_annotation_records[$language]) ? $node->field_annotation_records[$language] : '';
+    if (empty($annotation_records)) {
+      return;
+    }
+    foreach ($annotation_records as $position => $value) {
+      $annotation = $annotation_records[$position]['field_annotations'][$language][0]['value'];
+      $time = $annotation_records[$position]['field_annotation_date'][$language][0]['value'];
+      $annotations[$annotation] = $time;
+    }
+  }
+  return $annotations;
+} // End of pdf_annotation_reader_get_all_annotations().
+
+/**
+ * - Helper function to get all annotations
+ *   on one particular file.
+ *
+ * @param $fid.
+ * - File id of the pdf file.
+ *
+ * @return $annotations.
+ * - All annotations stored.
+ *
+ */
+function pdf_annotation_reader_get_all_annotations_on_file($fid) {
+  $annotation_options = array(0 => t('None'));
+  $annotations = array(
+    'last_annotations' => 0,
+    'annotation_options' => $annotation_options,
+  );
+  if ($fid) {
+    $nids = pdf_annotation_reader_get_annotation_nids($fid);
+    if (empty($nids)) {
+      return $annotations;
+    }
+    foreach ($nids as $nid) {
+      $annotation_options += pdf_annotation_reader_get_all_annotations($nid);
+      $all_annotations[$nid] = pdf_annotation_reader_get_all_annotations_string($nid);
+    }
+    $all_annotation = implode(",",$all_annotations);
+    $all_annotation = '[' . $all_annotation . ']';
+    $annotation_options[$all_annotation] = t('All');
+    arsort($annotation_options);
+    $annotation_keys = array_keys($annotation_options);
+    $last_annotations = $annotation_keys[1];
+    $annotations['last_annotations'] = $last_annotations;//$last_annotations,
+    $annotations['annotation_options'] = $annotation_options;
+  }
+  return  $annotations;
+} // End of pdf_annotation_reader_get_all_annotations_on_file().
+
+
+/**
+ * - Helper function to get all users
+ *   name who stored annotations on
+ *   one particular file.
+ *
+ * @param $fid.
+ * - File id of the pdf file.
+ *
+ * @return $users
+ * - Name of the users.
+ */
+function pdf_annotation_reader_get_annotated_users($fid) {
+  $users = array('0' => t('All'));
+  if ($fid) {
+    $query = db_select('node', 'n');
+    $query->join('field_data_field_user', 'fdfu', 'fdfu.revision_id = n.vid');
+    $query->join('field_data_field_file_id', 'fdffi', 'fdffi.revision_id = n.vid');
+    $query->condition('n.type', 'pdf_annotation_reader_records');
+    $query->condition('fdffi.field_file_id_value', $fid);
+    $query->fields('fdfu', array('field_user_target_id'));
+    $results = $query->execute()->fetchAll();
+    foreach($results as $result) {
+      $uid = $result->field_user_target_id;
+      $user = user_load($uid);
+      $users[$uid] = $user->name;
+    }
+  }
+  return $users;
+} // End of pdf_annotation_reader_get_annotated_users($fid).
+
+/**
+ * - Helper function to get nid of
+ *   stored pdf annotation reader
+ *   records.
+ *
+ * @param $fid.
+ * - File id of the pdf file.
+ *
+ * @param $uid.
+ * - User id of add annoattions
+ *
+ * @return $nid
+ * - Nid of annotation reader records.
+ */
+function pdf_annotation_reader_get_annotation_nid($fid, $uid) {
+  $nid = '';
+  if ($fid && $uid) {
+    $query = db_select('node', 'n');
+    $query->join('field_data_field_user', 'fdfu', 'fdfu.revision_id = n.vid');
+    $query->join('field_data_field_file_id', 'fdffi', 'fdffi.revision_id = n.vid');
+    $query->condition('n.type', 'pdf_annotation_reader_records');
+    $query->condition('fdffi.field_file_id_value', $fid);
+    $query->condition('fdfu.field_user_target_id', $uid);
+    $query->fields('n', array('nid'));
+    $query->range(0, 1);
+    $nid = $query->execute()->fetchField();
+  }
+  return $nid;
+} // End of pdf_annotation_reader_get_annotation_nid().
+
+/**
+ * - Helper function to get nids of
+ *   stored pdf annotation reader
+ *   records.
+ *
+ * @param $fid.
+ * - File id of the pdf file.
+ *
+ * @return $nids
+ * - Nids of annotation reader records.
+ */
+function pdf_annotation_reader_get_annotation_nids($fid) {
+  $nids = array();
+  if ($fid) {
+    $query = db_select('node', 'n');
+    //$query->join('field_data_field_user', 'fdfu', 'fdfu.revision_id = n.vid');
+    $query->join('field_data_field_file_id', 'fdffi', 'fdffi.revision_id = n.vid');
+    $query->condition('n.type', 'pdf_annotation_reader_records');
+    $query->condition('fdffi.field_file_id_value', $fid);
+    //$query->condition('fdfu.field_user_target_id', $uid);
+    $query->fields('n', array('nid'));
+    $nids = $query->execute()->fetchAllKeyed(0,0);
+  }
+  return $nids;
+} // End of pdf_annotation_reader_get_annotation_nids().
+
+/*
+ *
+ */
+function pdf_annotation_reader_get_all_annotations_string($nid) {
+  $all_annotations = '';
+  $annotations = array();
+  if ($nid) {
+    $node = node_load($nid);
+    $language = $node->language;
+    $annotation_records = isset($node->field_annotation_records[$language]) ? $node->field_annotation_records[$language] : '';
+    if (empty($annotation_records)) {
+      return $annotations;
+    }
+    foreach ($annotation_records as $position => $value) {
+      $annotation = isset($annotation_records[$position]['field_annotations'][$language][0])
+                  ? $annotation_records[$position]['field_annotations'][$language][0]['value'] : '';
+      $annotation = substr($annotation, 1);
+      $annotation = substr($annotation, 0, -1);
+      $annotations[$position] = $annotation;
+    }
+    $all_annotations = implode(",",$annotations);;
+  }
+
+  return $all_annotations;
+}
